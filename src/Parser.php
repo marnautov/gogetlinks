@@ -19,6 +19,7 @@ class Parser {
                 'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
                 // 'Accept'    => 'application/json, text/javascript, */*; q=0.01',
             ],
+            'verify'=>  false,
             'debug' =>  $config['debug']??false,
         ]);
     }
@@ -48,8 +49,9 @@ class Parser {
         ];
         
         $response = $this->client->request('POST', $url, ['form_params' => $postData]);
-
-        var_dump($response->getStatusCode());
+        if ($response->getStatusCode() !== 200){
+            throw new \Exception("Ошибка, статус страницы вернул код: ".$response->getStatusCode());
+        }
 
         $html = (string)$response->getBody();
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
@@ -96,6 +98,20 @@ class Parser {
         }
 
         return $sites;
+
+    }
+
+
+    public function getSiteInfo(int $siteId)
+    {
+
+        $response = $this->client->get('https://gogetlinks.net/editSiteInfo/index/site_id/'.$siteId);
+        if ($response->getStatusCode() !== 200){
+            throw new \Exception("Ошибка, статус страницы вернул код: ".$response->getStatusCode());
+        }
+        $html = (string)$response->getBody();
+        $html = mb_convert_encoding($html, "utf-8", "windows-1251");
+
 
     }
 
