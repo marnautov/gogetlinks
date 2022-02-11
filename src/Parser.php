@@ -33,6 +33,18 @@ class Parser {
     }
 
 
+    private function getUserId ()
+    {
+
+//        dd($html);
+//
+//        preg_match('#userId:\s*([0-9]+),#is', $html, $m);
+//        dump("Авторизовались, userId: ");
+//        dump($m);
+
+    }
+
+
     /**
      * Авторизация
      */
@@ -49,7 +61,7 @@ class Parser {
         
         $response = $this->client->request('POST', $url, ['form_params' => $postData]);
 
-        var_dump($response->getStatusCode());
+//        var_dump($response->getStatusCode());
 
         $html = (string)$response->getBody();
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
@@ -73,7 +85,6 @@ class Parser {
 
         $html = (string)$response->getBody();
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
-
 
         $sites = [];
 
@@ -121,6 +132,10 @@ class Parser {
 
             $task = [];
 
+            preg_match('#col_row_([0-9]+)#is', $block, $m);
+            $task['id'] = intval($m[1]);
+
+
             preg_match_all('#<td[^>]*>(.+?)</td>#is', $block, $m);
             $tdBlocks = $m[1];
 
@@ -129,7 +144,6 @@ class Parser {
             $task['price'] = trim(strip_tags(html_entity_decode($tdBlocks[5])),"\xC2\xA0\n");
             $task['time_passed'] = trim(strip_tags(html_entity_decode($tdBlocks[4])),"\xC2\xA0\n");
             $task['outbound links'] = trim(strip_tags(html_entity_decode($tdBlocks[2])),"\xC2\xA0\n");
-
 
 
             preg_match('#<a href="([^"]*)"[^>]*>([^<]*)</a>#is', $tdBlocks[0], $m);
@@ -149,6 +163,48 @@ class Parser {
 
     }
 
+
+    /**
+     * Получить подробную информацию о задании
+     */
+    public function getTask(int $taskId)
+    {
+
+        $response = $this->client->get('https://gogetlinks.net/template/view_task.php?curr_id='.$taskId);
+        if ($response->getStatusCode() !== 200){
+            throw new \Exception("Ошибка, статус страницы вернул код: ".$response->getStatusCode());
+        }
+        $html = $response->getBody();
+        $html = mb_convert_encoding($html, "utf-8", "windows-1251");
+
+        $task = [];
+
+        dump($html);
+
+        preg_match('#Тип обзора</div>.+?block_value">([^>]+?)</div>#uis',$html,$m);
+        $task['type'] = $m[1];
+
+        preg_match('#Внешних ссылок.+?block_value">([^<]+?)</div>#uis',$html,$m);
+        $task['externalLinks'] = $m[1];
+
+        preg_match('#Текст задания.+?block_value">(.+?)</div>#uis',$html,$m);
+        $task['description'] = $m[1];
+
+        preg_match('#<input[^>]+?id="copy_url"[^>]+?value="([^"]+)"#is', $html, $m);
+        $task['url'] = $m[1];
+
+        preg_match('#<input[^>]+?id="copy_unhor"[^>]+?value="([^"]+)"#is', $html, $m);
+        $task['anchor'] = $m[1];
+
+        preg_match('#<input[^>]+?id="copy_source"[^>]+?value="([^"]+)"#is', $html, $m);
+        $task['source'] = $m[1];
+
+
+        dump($task);
+
+        // https://gogetlinks.net/template/view_task.php?curr_id=21383886&user_id=24810&type=4&task_type=review
+        
+    }
 
     /**
      * Заказать написание текста у gogetlinks
