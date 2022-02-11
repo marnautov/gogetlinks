@@ -1,5 +1,9 @@
 <?php
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require '../vendor/autoload.php';
 
 
@@ -8,6 +12,7 @@ if (!is_file($configFile)){
     throw new \Exception("Создайте файл config.ini");
 }
 $config = parse_ini_file($configFile);
+
 
 
 $ggl = new \Amxm\Gogetlinks\Parser();
