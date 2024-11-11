@@ -66,7 +66,6 @@ class Parser {
         $html = (string)$response->getBody();
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
 
-
         return true;
 
     }
@@ -127,7 +126,7 @@ class Parser {
 
         $tasks = [];
 
-        preg_match_all('#<tr class="table_content_rows.+?</tr>#is', $html, $matches);
+        preg_match_all('#<tr\s+id="col_row_.+?</tr>#is', $html, $matches);
         foreach($matches[0] as $block) {
 
             $task = [];
@@ -135,15 +134,14 @@ class Parser {
             preg_match('#col_row_([0-9]+)#is', $block, $m);
             $task['id'] = intval($m[1]);
 
-
             preg_match_all('#<td[^>]*>(.+?)</td>#is', $block, $m);
             $tdBlocks = $m[1];
 
-            $task['blocks'] = $m[1];
+            //$task['blocks'] = $m[1];
 
-            $task['price'] = trim(strip_tags(html_entity_decode($tdBlocks[5])),"\xC2\xA0\n");
-            $task['time_passed'] = trim(strip_tags(html_entity_decode($tdBlocks[4])),"\xC2\xA0\n");
-            $task['outbound links'] = trim(strip_tags(html_entity_decode($tdBlocks[2])),"\xC2\xA0\n");
+            $task['price'] = trim(strip_tags(html_entity_decode($tdBlocks[5])));
+            $task['time_passed'] = trim(strip_tags(html_entity_decode($tdBlocks[4])));
+            $task['outbound links'] = trim(strip_tags(html_entity_decode($tdBlocks[2])));
 
 
             preg_match('#<a href="([^"]*)"[^>]*>([^<]*)</a>#is', $tdBlocks[0], $m);
@@ -154,14 +152,18 @@ class Parser {
             $task['customer'] = trim($m[2]);
             $task['customer_url'] = trim($m[1]);
 
+            if ($task['id']){
+                // получаем подробную информацию о задании
+                $task['review'] = $this->getTask($task['id']);
+            }
+
             $tasks[] = $task;
 
         }
 
-
         return $tasks;
-
     }
+
 
 
     /**
@@ -179,7 +181,7 @@ class Parser {
 
         $task = [];
 
-        dump($html);
+        //dump($html);
 
         preg_match('#Тип обзора</div>.+?block_value">([^>]+?)</div>#uis',$html,$m);
         $task['type'] = $m[1];
@@ -199,11 +201,10 @@ class Parser {
         preg_match('#<input[^>]+?id="copy_source"[^>]+?value="([^"]+)"#is', $html, $m);
         $task['source'] = $m[1];
 
+        return $task;
 
-        dump($task);
+        //dump($task);
 
-        // https://gogetlinks.net/template/view_task.php?curr_id=21383886&user_id=24810&type=4&task_type=review
-        
     }
 
     /**
