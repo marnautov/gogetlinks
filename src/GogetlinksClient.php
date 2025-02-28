@@ -4,17 +4,17 @@ namespace Amxm\Gogetlinks;
 
 use \GuzzleHttp\ClientInterface;
 use \GuzzleHttp\Client;
+use \GuzzleHttp\Cookie\CookieJar;
 
+class GogetlinksClient implements GogetlinksInterface {
 
-class Parser {
+    private ClientInterface $client;
 
-    private Client $client;
-
-    function __construct($config = array())
+    function __construct($config = array(), CookieJar $cookieJar = null)
     {
 
         $this->client = new Client([
-            'cookies' => true,
+            'cookies' => $cookieJar ?? true, // You can set cookies to true in a client constructor if you would like to use a shared cookie jar for all requests.
             'headers' => [
                 'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
                 // 'Accept'    => 'application/json, text/javascript, */*; q=0.01',
@@ -48,7 +48,7 @@ class Parser {
     /**
      * Авторизация
      */
-    public function signIn($email, $password)
+    public function login(string $email, string $password)
     {
         $url = 'https://gogetlinks.net/user/signIn';
 
@@ -74,7 +74,7 @@ class Parser {
     /**
      * Список сайтов вебмастера
      */
-    public function getSites($html = false)
+    public function getSites(): array
     {
 
         $response = $this->client->get('https://gogetlinks.net/mySites');
@@ -92,14 +92,80 @@ class Parser {
 
             $site = [];
 
-            preg_match('#<div class="site-link__info">([^<>]+)<#is', $block, $m);
-            $site['domain'] = trim($m[1]);
 
-            preg_match('#/editSiteInfo/index/site_id/([0-9]+)#is', $block, $m);
-            $site['site_id'] = intval($m[1]);
+ // основные данные
 
-            preg_match('#<td data-th="Скорость размещения"[^<]+<div[^<]+(<div.+?)</#uis', $block, $m);
-            $site['speed'] = trim(strip_tags($m[1]));
+    // домен
+    preg_match('#<div class="site-link__info">([^<>]+)<#is', $block, $m);
+    $site['domain'] = trim($m[1]);
+
+    // id сайта в системе
+    preg_match('#/editSiteInfo/index/site_id/([0-9]+)#is', $block, $m);
+    $site['site_id'] = intval($m[1]);
+
+
+    if (!$site['domain'] || !$site['site_id']){
+        // пока не буду кидать exception
+        continue;
+    }
+
+
+    // информационные данные
+
+    // статус (видимость) сайта
+    preg_match('#<td\s+data\-th="Видимость"[^>]*>(.+?)</td>#uis', $block, $m);
+    $status = null;
+    if (preg_match('#Доступен#uis', $m[1])){
+        $status = 'AVAILABLE';
+    } elseif (preg_match('#Скрыт#uis', $m[1])){
+        $status = 'HIDDEN';
+    } elseif (preg_match('#Отклон[её]н#uis', $m[1])){
+        $status = 'REJECTED';
+    } elseif (preg_match('#Не активен#uis', $m[1])){
+        $status = 'INACTIVE';
+    }
+    $site['status'] = $status;
+    $site['status_text'] = trim(strip_tags($m[0]));
+
+    // яндекс ИКС
+    preg_match('#<td\s+data\-th="ИКС".+?<div[^>]*?>\s*([0-9]+)#uis', $block, $m);
+    if ($m[1] && is_numeric($m[1])) $site['yandex_iks'] = intval($m[1]);
+
+    // TF/CF
+    preg_match('#<td\s+data\-th="TF/CF".+?</td>#uis', $block, $m);
+    if ($m[0]){
+        $sText = trim(strip_tags($m[0]));
+        if ($sText && is_numeric($sText)) $site['tc_cf'] = intval($sText);
+    }
+
+   // PR/CY
+   preg_match('#<td\s+data\-th="PR.CY".+?</td>#uis', $block, $m);
+   if ($m[0]){
+       $sText = trim(strip_tags($m[0]));
+       if ($sText && is_numeric($sText)) $site['pr_cy'] = intval($sText);
+   }
+
+   // Трафик
+   preg_match('#<td\s+data\-th="Трафик".+?<span[^>]*?>\s*([0-9]+)\s*</span>#uis', $block, $m);
+   if ($m[1] && is_numeric($m[1])) $site['traffic'] = intval($m[1]);
+
+    // Траст
+    preg_match('#<td\s+data\-th="Траст".+?</td>#uis', $block, $m);
+    if ($m[0]){
+        $sText = trim(strip_tags($m[0]));
+        if ($sText && is_numeric($sText)) $site['trust'] = intval($sText);
+    }
+
+   
+   // Скорость размещения
+    preg_match('#<td data-th="Скорость размещения"[^<]+<div[^<]+(<div.+?)</#uis', $block, $m);
+    $sText = trim(strip_tags($m[1]));
+    if (preg_match('#(дней|день)#uis',$sText)){
+        $sText = floatval($sText);
+    } else {
+        $sText = null;
+    }
+    $site['posting_speed'] = $sText;
 
             $sites[] = $site;
 
@@ -113,10 +179,10 @@ class Parser {
     /**
      * Список заданий вембастера
      */
-    public function getTasks()
+    public function getTasks(): array
     {
 
-        $response = $this->client->get('https://gogetlinks.net/web_task.php');
+        $response = $this->client->get('https://gogetlinks.net/webTask');
         if ($response->getStatusCode() !== 200){
             throw new \Exception("Ошибка, статус страницы вернул код: ".$response->getStatusCode());
         }

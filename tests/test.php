@@ -14,9 +14,8 @@ if (!is_file($configFile)){
 $config = parse_ini_file($configFile);
 
 
-
-$ggl = new \Amxm\Gogetlinks\Parser();
-$ggl->signIn($config['email'], $config['password']);
+$ggl = new \Amxm\Gogetlinks\GogetlinksClient();
+$ggl->login($config['email'], $config['password']);
 
 
 // $ggl->getSites(file_get_contents('test.html'));
