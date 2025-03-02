@@ -1,4 +1,4 @@
-# gogetlinks
+# Gogetlinks
 
 Класс для работы с сервисом https://gogetlinks.net/, в связи с отсутствием официального api.
 

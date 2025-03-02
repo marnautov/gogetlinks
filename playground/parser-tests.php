@@ -2,6 +2,16 @@
 
 require __DIR__.'/../vendor/autoload.php';
 
+
+$html = file_get_contents(__DIR__.'/ggl-tasks.html');
+
+
+
+
+
+
+
+exit();
 $html = file_get_contents(__DIR__.'/ggl-mysites.html');
 
 // $html = mb_convert_encoding($html, "utf-8", "windows-1251");
