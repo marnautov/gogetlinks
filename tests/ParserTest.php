@@ -49,6 +49,26 @@ class ParserTest extends TestCase {
         // dd($sites[1]);
 
     }
+
+    public function testMoneyBlock ()
+    {
+        $this->assertSame(5.32, Parser::parseMoneyBlock('<span>5.32 руб.</span>'));
+        $this->assertSame(5.32, Parser::parseMoneyBlock('<span>5,32 руб.</span>'));
+        $this->assertSame(5.0, Parser::parseMoneyBlock('<span>5 руб.</span>'));
+        $this->assertSame(0.35, Parser::parseMoneyBlock('<span>.35 руб.</span>'));
+        $this->assertSame(195861.75, Parser::parseMoneyBlock('<span>баланс: 195 861.75</span>'));
+        $this->assertSame(0.0, Parser::parseMoneyBlock('<span>0 </span>'));
+        $this->assertSame(null, Parser::parseMoneyBlock('<span>  </span>'));
+    }
+
+    public function testParseMoneyBlock()
+    {
+        $info = Parser::parseBalance($this->getSnipped('money-block.html'));
+        $this->assertSame(1232.84, $info['all']);
+        $this->assertSame(1232.84, $info['open']);
+        $this->assertSame(0.0, $info['block']);
+        $this->assertSame(49.99, $info['expected']);
+    }
     
 
 }

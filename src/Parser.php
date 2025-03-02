@@ -192,4 +192,41 @@ class Parser
     }
 
 
+    public static function parseBalance($html)
+    {
+        $balance = [];
+
+        preg_match('#<td[^>]+?balance__all[^>]+?>(.+?)</td>#is', $html, $m);
+        $balance['all'] = isset($m[1]) ? Parser::parseMoneyBlock($m[1]): null;
+
+        preg_match('#<td[^>]+?balance__open[^>]+?>(.+?)</td>#is', $html, $m);
+        $balance['open'] = isset($m[1]) ? Parser::parseMoneyBlock($m[1]): null;
+
+        preg_match('#<td[^>]+?balance__block[^>]+?>(.+?)</td>#is', $html, $m);
+        $balance['block'] = isset($m[1]) ? Parser::parseMoneyBlock($m[1]): null;
+
+        preg_match('#<td[^>]+?balance__expected[^>]+?>(.+?)</td>#is', $html, $m);
+        $balance['expected'] = isset($m[1]) ? Parser::parseMoneyBlock($m[1]): null;
+
+        return $balance;
+
+    }
+
+    public static function parseMoneyBlock($moneyHtmlBlock)
+    {
+
+        $moneyHtmlBlock = trim($moneyHtmlBlock);
+        preg_match('#([0-9\s.,]+)#is', $moneyHtmlBlock, $m);
+        if(!isset($m[1])) return null;
+        $money = trim($m[1]);
+        if (mb_strlen($money)<1) return null;
+        $money = str_replace(',','.', $money);
+        $money = preg_replace('#[^0-9.,]#is','', $money);
+        $money = floatval($money);
+        
+        return $money;
+
+    }
+
+
 }

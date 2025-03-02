@@ -10,42 +10,6 @@ require __DIR__.'/../vendor/autoload.php';
 
 
 
-$html = '	</div><div class="js-web-task__content" id="div_table_content">
-	<div class="table__before">
-	<div class="tabs tabs_table">
-																			<a href="/webTask/index/action/viewWait" class="tabs__item tabs__item_active">
-					<span>Ожидают проверки</span>
-					<span class="tabs__count">4</span>
-				</a>
-																	<a href="/webTask/index/action/viewWaitIndexation" class="tabs__item ">
-					<span>Ожидают индексации</span>
-					<span class="tabs__count">1</span>
-				</a>
-												<a href="/webTask/index/action/viewPaid" class="tabs__item ">
-					<span>Оплаченные</span>
-					<span class="tabs__count">1 645/61</span>
-				</a>
-						</div>
-
-	<div class="table__counter">
-		<div>на&nbsp;странице</div>
-		<select class="input-control input-control_small js-web-task__rows-in-table" name="count_in_page">
-							<option value="5" >5</option>
-							<option value="10" >10</option>
-							<option value="20" selected>20</option>
-							<option value="50" >50</option>
-					</select>
-	</div>';
-
-Parser::parseTaskTabs($html);
-
-
-dd('end');
-
-
-
-
-
 $configFile = __DIR__.'/config.ini';
 if (!is_file($configFile)){
     throw new \Exception("Создайте файл config.ini");
@@ -70,6 +34,10 @@ $cookieJar = new \GuzzleHttp\Cookie\FileCookieJar(__DIR__.'/cookie.txt', true);
 $ggl = new \Amxm\Gogetlinks\GogetlinksClient(['debug'=>true,'client_debug'=>false], $cookieJar);
 
 $ggl->login($config['email'], $config['password']);
+
+$balanceInfo = $ggl->getBalance();
+dump($balanceInfo);
+
 
 // $ggl->getSites(file_get_contents('test.html'));
 

@@ -12,6 +12,8 @@ class GogetlinksClient implements GogetlinksInterface
     private ClientInterface $client;
     private $debug = false;
 
+    private $balance = [];
+
     function __construct($config = array(), ?CookieJar $cookieJar = null)
     {
 
@@ -25,7 +27,6 @@ class GogetlinksClient implements GogetlinksInterface
         ]);
 
         if (isset($config['debug'])) $this->debug = $config['debug'];
-
     }
 
     /**
@@ -54,6 +55,7 @@ class GogetlinksClient implements GogetlinksInterface
 
             if (Parser::hasAuthenticatedMarkup($html)) {
                 $this->dprint("Уже авторизованы в системе, повторная авторизация не требуется");
+                $this->parseBalance($html);
                 return true;
             }
         }
@@ -77,17 +79,17 @@ class GogetlinksClient implements GogetlinksInterface
         $html = (string)$response->getBody();
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
 
-        if (Parser::hasAuthenticatedMarkup($html)){
+        if (Parser::hasAuthenticatedMarkup($html)) {
             $this->dprint("Успешно авторизовались в системе");
+            $this->parseBalance($html);
             return true;
-        } 
+        }
 
         $this->dprint("Авторизация не удалась");
 
         dd($html);
 
         throw new \Exception("Не удалась авторизация в системе");
-
     }
 
 
@@ -97,7 +99,7 @@ class GogetlinksClient implements GogetlinksInterface
     public function getSites(): array
     {
 
-        $response = $this->client->request('GET','https://gogetlinks.net/mySites');
+        $response = $this->client->request('GET', 'https://gogetlinks.net/mySites');
         if ($response->getStatusCode() !== 200) {
             throw new \Exception("Ошибка, статус страницы вернул код: " . $response->getStatusCode());
         }
@@ -106,7 +108,6 @@ class GogetlinksClient implements GogetlinksInterface
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
 
         return Parser::parseSites($html);
-
     }
 
 
@@ -116,7 +117,7 @@ class GogetlinksClient implements GogetlinksInterface
     public function getTasks(): array
     {
 
-        $response = $this->client->request('GET','https://gogetlinks.net/webTask');
+        $response = $this->client->request('GET', 'https://gogetlinks.net/webTask');
         if ($response->getStatusCode() !== 200) {
             throw new \Exception("Ошибка, статус страницы вернул код: " . $response->getStatusCode());
         }
@@ -126,12 +127,11 @@ class GogetlinksClient implements GogetlinksInterface
 
         $tasks = Parser::parseTasks($html);
 
-        array_walk($tasks, function (&$task){
+        array_walk($tasks, function (&$task) {
             $task['review'] = $this->getTask($task['id']);
         });
 
         return $tasks;
-
     }
 
 
@@ -148,9 +148,8 @@ class GogetlinksClient implements GogetlinksInterface
         }
         $html = $response->getBody();
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
-        
-        return Parser::parseTaskInfo($html);
 
+        return Parser::parseTaskInfo($html);
     }
 
     /**
@@ -170,15 +169,19 @@ class GogetlinksClient implements GogetlinksInterface
          */
     }
 
+    public function getBalance() {
+        if ($this->balance) return $this->balance;
+    }
+
+    private function parseBalance($html)
+    {
+        $this->balance = Parser::parseBalance($html);
+    }
 
 
     private function dprint($text)
     {
         if (!$this->debug) return;
-        echo ($text.(php_sapi_name() == 'cli'?"\n":"<br>"));
+        echo ($text . (php_sapi_name() == 'cli' ? "\n" : "<br>"));
     }
-
-
-
-
 }
