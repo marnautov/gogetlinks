@@ -12,6 +12,8 @@ class GogetlinksClient implements GogetlinksInterface
     private ClientInterface $client;
     private $debug = false;
 
+    private $captchaCallbackSolver = null; // callback для обхода капчи
+
     private $balance = [];
 
     function __construct($config = array(), ?CookieJar $cookieJar = null)
@@ -37,6 +39,10 @@ class GogetlinksClient implements GogetlinksInterface
         $this->client = $client;
     }
 
+    public function setCaptchaSolver(callable $captchaSolver)
+    {
+        $this->captchaCallbackSolver = $captchaSolver;
+    }
 
 
     /**
@@ -61,12 +67,26 @@ class GogetlinksClient implements GogetlinksInterface
         }
 
 
-        // $response = $this->client->request('GET', $url);
-        // $html = (string)$response->getBody();
-        // dd($html);
-
         $this->dprint("Авторизовываемся в системе с email {$email}");
 
+        // если задан callback на разгадку капчи
+        if ($this->captchaCallbackSolver) {
+            // если не получали html в $attemptSessionRestore
+            if (!isset($html)) {
+                $url = 'https://gogetlinks.net/user/signIn';
+                $response = $this->client->request('GET', $url);
+                $html = (string)$response->getBody();
+                $html = mb_convert_encoding($html, "utf-8", "windows-1251");
+            }
+            $captchaInfo = Parser::getCaptchaInfo($html);
+            if ($captchaInfo) {
+                $capthaResultInfo = call_user_func($this->captchaCallbackSolver, $captchaInfo, $html);
+            } else {
+                $this->dprint("Код капчи не найден на сайте, возможно он не требуется");
+            }    
+        }
+
+        // пытаемся авторизоваться
         $url = 'https://gogetlinks.net/user/signIn';
         $postData = [
             'e_mail' => $email,
@@ -74,6 +94,7 @@ class GogetlinksClient implements GogetlinksInterface
             'remember' =>   'on',
             'is_ajax' => 'true'
         ];
+        if (isset($capthaResultInfo) && is_array($capthaResultInfo)) $postData = array_merge($postData, $capthaResultInfo);
 
         $response = $this->client->request('POST', $url, ['form_params' => $postData]);
         $html = (string)$response->getBody();
@@ -84,6 +105,19 @@ class GogetlinksClient implements GogetlinksInterface
             $this->parseBalance($html);
             return true;
         }
+
+        // 
+        $this->dprint("Смотрим мои сайты");
+        $response = $this->client->request('GET', 'https://gogetlinks.net/mySites');
+        $html = (string)$response->getBody();
+        $html = mb_convert_encoding($html, "utf-8", "windows-1251");
+
+        if (Parser::hasAuthenticatedMarkup($html)) {
+            $this->dprint("Успешно авторизовались в системе");
+            $this->parseBalance($html);
+            return true;
+        }
+
 
         $this->dprint("Авторизация не удалась");
 
@@ -120,7 +154,7 @@ class GogetlinksClient implements GogetlinksInterface
         $urls = [
             'NEW'       =>  'https://gogetlinks.net/webTask/index',
             'WAIT'      =>  'https://gogetlinks.net/webTask/index/action/viewWait',
-            'WAIT_INDEX'=>  'https://gogetlinks.net/webTask/index/action/viewWaitIndexation',
+            'WAIT_INDEX' =>  'https://gogetlinks.net/webTask/index/action/viewWaitIndexation',
             'PAID'      =>  'https://gogetlinks.net/webTask/index/action/viewPaid',
         ];
 
@@ -187,7 +221,8 @@ class GogetlinksClient implements GogetlinksInterface
          */
     }
 
-    public function getBalance() {
+    public function getBalance()
+    {
         if ($this->balance) return $this->balance;
     }
 
