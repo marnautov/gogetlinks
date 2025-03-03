@@ -70,5 +70,15 @@ class ParserTest extends TestCase {
         $this->assertSame(49.99, $info['expected']);
     }
     
+    public function testParseTaskTabs()
+    {
+        $html = $this->getSnipped('task-tabs.html');
+        $tasksInfo = Parser::parseTaskTabs($html);
+        $this->assertEquals('Новые', $tasksInfo['active']);
+
+    }
+    
+
+
 
 }

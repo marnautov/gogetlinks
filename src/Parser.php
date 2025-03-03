@@ -177,12 +177,19 @@ class Parser
 
     public static function parseTaskTabs($html){
 
+
+        $info = [];
+
         preg_match('#<div\s+class="tabs\s+tabs_table">(.+?)</div>#is', $html, $m);
         if (!isset($m[1])) return false;
         $block = $m[1];
 
+        # active tasks type
+        preg_match('#<a[^>]+?tabs__item_active[^>]*?>\s*<span>([^>]+?)</span>#is', $block, $m);
+        $info['active'] = isset($m[1])? trim(strip_tags($m[1])) : false;
+
         preg_match_all('#<span>([^<>]+?)</span>\s*<span[^>]*?>([^<>]+?)</span>#is', $block, $matches, PREG_SET_ORDER);
-        $info = array_reduce($matches, function($c,$i){
+        $info['statuses'] = array_reduce($matches, function($c,$i) {
             $c[$i[1]] = $i[2];
             return $c;
         }, []);
@@ -227,6 +234,7 @@ class Parser
         return $money;
 
     }
+
 
 
 }

@@ -16,18 +16,20 @@ if (!is_file($configFile)){
 }
 $config = parse_ini_file($configFile);
 
-
-// $cookieJar = \GuzzleHttp\Cookie\CookieJar::fromArray(
-//     [
-//         'PHPSESSID' => 'a9d9dc85fc83566d905ba169bd0ce68b',
-//         'hash' => 'b59899e24bbb20e8bfe98d79e5983732'
-//     ],
-//     'gogetlinks.net'
-// );
+// авторизация по сессии
+if ($config['PHPSESSID']){
+    $cookieJar = \GuzzleHttp\Cookie\CookieJar::fromArray(
+        [
+            'PHPSESSID' => $config['PHPSESSID'],
+            'hash' => $config['hash']
+        ],
+        'gogetlinks.net'
+    );
+}
 
 // $cookieJar = null;
 
-$cookieJar = new \GuzzleHttp\Cookie\FileCookieJar(__DIR__.'/cookie.txt', true);
+// $cookieJar = new \GuzzleHttp\Cookie\FileCookieJar(__DIR__.'/cookie-' . preg_replace('#[^a-z]#i','_',$config['email']). '.txt', true);
 
 // $cookieJar = new FileCookieJar($cookieFile, TRUE);
 
@@ -45,7 +47,7 @@ dump($balanceInfo);
 // // dump ($sites);
 // dump("Получено сайтов: ".count($sites));
 
-$tasks = $ggl->getTasks();
+$tasks = $ggl->getTasks('NEW');
 dump("Получено заданий: ".count($tasks));
 
 

@@ -114,10 +114,21 @@ class GogetlinksClient implements GogetlinksInterface
     /**
      * Список заданий вембастера
      */
-    public function getTasks(): array
+    public function getTasks($type = 'NEW'): array
     {
 
-        $response = $this->client->request('GET', 'https://gogetlinks.net/webTask');
+        $urls = [
+            'NEW'       =>  'https://gogetlinks.net/webTask/index',
+            'WAIT'      =>  'https://gogetlinks.net/webTask/index/action/viewWait',
+            'WAIT_INDEX'=>  'https://gogetlinks.net/webTask/index/action/viewWaitIndexation',
+            'PAID'      =>  'https://gogetlinks.net/webTask/index/action/viewPaid',
+        ];
+
+        $url = $urls[$type];
+        if (!$url) throw new \InvalidArgumentException("Указан не верный тип заданий");
+
+
+        $response = $this->client->request('GET', $url);
         if ($response->getStatusCode() !== 200) {
             throw new \Exception("Ошибка, статус страницы вернул код: " . $response->getStatusCode());
         }
@@ -125,11 +136,18 @@ class GogetlinksClient implements GogetlinksInterface
         $html = (string)$response->getBody();
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
 
+
+        $tasksInfo = Parser::parseTaskTabs($html);
+
+        // костыль, когда нет новых заданий
+        if ($type == 'NEW' && $tasksInfo['active'] != "Новые") return [];
+
+        // парсим таски
         $tasks = Parser::parseTasks($html);
 
-        array_walk($tasks, function (&$task) {
-            $task['review'] = $this->getTask($task['id']);
-        });
+        // array_walk($tasks, function (&$task) {
+        //     $task['review'] = $this->getTask($task['id']);
+        // });
 
         return $tasks;
     }
