@@ -178,7 +178,6 @@ class Parser
     public static function parseTaskTabs($html)
     {
 
-
         $info = [];
 
         preg_match('#<div\s+class="tabs\s+tabs_table">(.+?)</div>#is', $html, $m);

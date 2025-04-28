@@ -9,16 +9,13 @@ use GuzzleHttp\Cookie\CookieJar;
 class GogetlinksClient implements GogetlinksInterface
 {
 
-    private ClientInterface $client;
     private $debug = false;
-
+    private ClientInterface $client;
     private $captchaCallbackSolver = null; // callback для обхода капчи
-
     private $balance = [];
 
     function __construct($config = array(), ?CookieJar $cookieJar = null)
     {
-
         $this->client = new Client([
             'cookies' => $cookieJar ?? true, // You can set cookies to true in a client constructor if you would like to use a shared cookie jar for all requests.
             'headers' => [
@@ -44,13 +41,11 @@ class GogetlinksClient implements GogetlinksInterface
         $this->captchaCallbackSolver = $captchaSolver;
     }
 
-
     /**
      * Авторизация
      */
     public function login(string $email, string $password, $attemptSessionRestore = true)
     {
-
         if ($attemptSessionRestore) {
             $this->dprint("Проверяем авторизацию по сессии [attemptSessionRestore]");
             // проверяем, возможно мы еще авторизованы по куке
@@ -65,7 +60,6 @@ class GogetlinksClient implements GogetlinksInterface
                 return true;
             }
         }
-
 
         $this->dprint("Авторизовываемся в системе с email {$email}");
 
@@ -118,10 +112,7 @@ class GogetlinksClient implements GogetlinksInterface
             return true;
         }
 
-
         $this->dprint("Авторизация не удалась");
-
-        dd($html);
 
         throw new \Exception("Не удалась авторизация в системе");
     }
@@ -140,6 +131,10 @@ class GogetlinksClient implements GogetlinksInterface
 
         $html = (string)$response->getBody();
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
+
+        if (!Parser::hasAuthenticatedMarkup($html)){
+            throw new \Exception("Ошибка, вы не авторизованы в системе");
+        }
 
         return Parser::parseSites($html);
     }
@@ -170,6 +165,9 @@ class GogetlinksClient implements GogetlinksInterface
         $html = (string)$response->getBody();
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
 
+        if (!Parser::hasAuthenticatedMarkup($html)){
+            throw new \Exception("Ошибка, вы не авторизованы в системе");
+        }
 
         $tasksInfo = Parser::parseTaskTabs($html);
 
@@ -187,6 +185,19 @@ class GogetlinksClient implements GogetlinksInterface
     }
 
 
+    public function getNewTasks($withReview = true)
+    {
+        $tasks = $this->getTasks('NEW');
+        if ($withReview){
+            // если сразу получить полную информацию о задании
+            array_walk($tasks, function (&$task) {
+                $task['review'] = $this->getTask($task['id']);
+            });
+        }
+        return $tasks;
+    }
+
+
 
     /**
      * Получить подробную информацию о задании
@@ -194,12 +205,18 @@ class GogetlinksClient implements GogetlinksInterface
     public function getTask(int $taskId)
     {
 
+        $this->dprint(__METHOD__);
+
         $response = $this->client->request('GET', 'https://gogetlinks.net/template/view_task.php?curr_id=' . $taskId);
         if ($response->getStatusCode() !== 200) {
             throw new \Exception("Ошибка, статус страницы вернул код: " . $response->getStatusCode());
         }
         $html = $response->getBody();
         $html = mb_convert_encoding($html, "utf-8", "windows-1251");
+
+        // if (!Parser::hasAuthenticatedMarkup($html)){
+        //     throw new \Exception("Ошибка, вы не авторизованы в системе");
+        // }
 
         return Parser::parseTaskInfo($html);
     }
@@ -225,6 +242,7 @@ class GogetlinksClient implements GogetlinksInterface
     {
         if ($this->balance) return $this->balance;
     }
+
 
     private function parseBalance($html)
     {

@@ -17,19 +17,19 @@ if ($config['PHPSESSID']){
     );
 }
 
+// $cookieJar = null;
 $ggl = new GogetlinksClient(['debug'=>true,'client_debug'=>false], $cookieJar);
 
-
 // Авторизовываемся
-//$ggl->login($config['email'], $config['password']);
+$ggl->login($config['email'], $config['password']);
 
-$sites = $ggl->getSites();
-dump($sites);
+// $sites = $ggl->getSites();
+// dump($sites);
 
 $balanceInfo = $ggl->getBalance();
 dump($balanceInfo);
 
-$tasks = $ggl->getTasks('NEW');
+$tasks = $ggl->getNewTasks();
 dump("Получено заданий: ".count($tasks));
 
 dump ($tasks);
