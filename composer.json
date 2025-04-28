@@ -2,7 +2,6 @@
     "name": "amxm/gogetlinks",
     "description": "PHP client for interacting with the Gogetlinks service.",
     "type": "library",
-    "version": "0.7",
     "autoload": {
         "psr-4": {
             "Amxm\\Gogetlinks\\": "src/"
